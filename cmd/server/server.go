@@ -52,6 +52,8 @@ func (tunnel *Tunnel) runTask() {
 		if err != nil {
 			// 认为链接关闭
 			log.Println("read error:", err)
+			taskPool <- task
+			break
 		}
 		respBodyString := string(respBody[:n])
 		res := strings.Split(respBodyString, `"""split"""`)
