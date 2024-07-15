@@ -17,6 +17,7 @@ var server = flag.String("server", "localhost:8080", "server")
 var localServer = flag.String("localServer", "localhost:8080", "localServer")
 
 func main() {
+	flag.Parse()
 	// 1. 拨号方式建立与服务端连接
 	conn, err := net.Dial("tcp", *server)
 	if err != nil {

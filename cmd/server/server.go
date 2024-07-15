@@ -113,6 +113,7 @@ func startServer() {
 
 func main() {
 	taskPool = make(chan *Task)
+	flag.Parse()
 	go startTunnels()
 	startServer()
 }
