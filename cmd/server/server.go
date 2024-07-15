@@ -12,8 +12,8 @@ import (
 	"sync"
 )
 
-var serverPort = flag.String("port", "8080", "serverPort")
-var tunnelPort = flag.String("port", "8080", "tunnelPort")
+var serverPort = flag.String("serverPort", "8080", "serverPort")
+var tunnelPort = flag.String("tunnelPort", "8080", "tunnelPort")
 
 type Task struct {
 	headers   map[string]*string
