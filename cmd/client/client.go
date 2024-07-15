@@ -10,28 +10,43 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 )
 
 var server = flag.String("server", "localhost:8080", "server")
 var localServer = flag.String("localServer", "localhost:8080", "localServer")
+var clientCount = flag.Int("clientCount", 100, "clientCount")
+
+var wg *sync.WaitGroup
 
 func main() {
 	flag.Parse()
+	wg = &sync.WaitGroup{}
+	for i := 0; i < *clientCount; i++ {
+		wg.Add(1)
+		go runClient(i + 1)
+	}
+	wg.Wait()
+}
+
+func runClient(number int) {
 	// 1. 拨号方式建立与服务端连接
 	conn, err := net.Dial("tcp", *server)
 	if err != nil {
 		fmt.Println("连接服务端失败,err:", err)
+		wg.Done()
 		return
 	}
 
 	// 注意：关闭连接位置，不能写在连接失败判断上面
 	defer func(conn net.Conn) {
+		wg.Done()
 		err := conn.Close()
 		if err != nil {
 			log.Fatal(err)
 		}
 	}(conn)
-
+	log.Println(`成功启动长连接` + strconv.Itoa(number))
 	for {
 		requestBody := make([]byte, 1024*8)
 		n, _ := conn.Read(requestBody)
