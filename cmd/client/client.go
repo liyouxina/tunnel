@@ -39,14 +39,14 @@ func main() {
 		requestBodyString := string(requestBody[:n])
 		req := strings.Split(requestBodyString, `"""split"""`)
 		headersString := req[0]
-		headers := make(map[string]*string)
+		headers := make(map[string][]string, 100)
 		_ = json.Unmarshal([]byte(headersString), &headers)
 		url := req[1]
 		body := req[2]
 		method := req[3]
 		request, _ := http.NewRequest(method, "http://"+*localServer+url, bytes.NewBuffer([]byte(body)))
 		for k, v := range headers {
-			request.Header.Set(k, *v)
+			request.Header.Set(k, v[0])
 		}
 		resp, _ := http.DefaultClient.Do(request)
 		respBody := make([]byte, 0, 1024*1024)
