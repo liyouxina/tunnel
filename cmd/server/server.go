@@ -16,7 +16,7 @@ var serverPort = flag.String("serverPort", "8080", "serverPort")
 var tunnelPort = flag.String("tunnelPort", "8080", "tunnelPort")
 
 type Task struct {
-	headers   map[string][]string
+	headers   string
 	url       string
 	body      string
 	method    string
@@ -100,10 +100,14 @@ func startServer() {
 		body := make([]byte, 8096)
 		n, _ := c.Request.Body.Read(body)
 		bodyString := string(body[:n])
+		headersString := ""
+		for k, v := range c.Request.Header {
+			headersString = headersString + k + "::::::::::::::::" + v[0] + ";;;;;;;;;;;;;;;;;"
+		}
 		wg := sync.WaitGroup{}
 		wg.Add(1)
 		task := Task{
-			headers: c.Request.Header,
+			headers: headersString,
 			url:     c.Request.RequestURI,
 			body:    bodyString,
 			method:  c.Request.Method,

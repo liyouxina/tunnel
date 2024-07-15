@@ -2,7 +2,6 @@ package main
 
 import (
 	"bytes"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"io"
@@ -39,14 +38,14 @@ func main() {
 		requestBodyString := string(requestBody[:n])
 		req := strings.Split(requestBodyString, `"""split"""`)
 		headersString := req[0]
-		headers := make(map[string][]string, 100)
-		_ = json.Unmarshal([]byte(headersString), &headers)
+		headers := strings.Split(headersString, `;;;;;;;;;;;;;;;;;`)
 		url := req[1]
 		body := req[2]
 		method := req[3]
 		request, _ := http.NewRequest(method, "http://"+*localServer+url, bytes.NewBuffer([]byte(body)))
-		for k, v := range headers {
-			request.Header.Set(k, v[0])
+		for _, header := range headers {
+			vs := strings.Split(header, `::::::::::::::::`)
+			request.Header.Set(vs[0], vs[1])
 		}
 		resp, _ := http.DefaultClient.Do(request)
 		respBody := make([]byte, 0, 1024*1024)
