@@ -16,7 +16,7 @@ import (
 
 func main() {
 	// 1. 拨号方式建立与服务端连接
-	conn, err := net.Dial("tcp", "47.96.73.93:8085")
+	conn, err := net.Dial("tcp", "localhost:8080")
 	if err != nil {
 		fmt.Println("连接服务端失败,err:", err)
 		return
@@ -32,8 +32,8 @@ func main() {
 
 	for {
 		requestBody := make([]byte, 1024*8)
-		_, _ = conn.Read(requestBody)
-		requestBodyString := string(requestBody)
+		n, _ := conn.Read(requestBody)
+		requestBodyString := string(requestBody[:n])
 		req := strings.Split(requestBodyString, `"""split"""`)
 		headersString := req[0]
 		headers := make(map[string]*string)
@@ -41,12 +41,12 @@ func main() {
 		url := req[1]
 		body := req[2]
 		method := req[3]
-		request, _ := http.NewRequest(method, "http://localhost:8080/"+url, bytes.NewBuffer([]byte(body)))
+		request, _ := http.NewRequest(method, "http://localhost:8082/"+url, bytes.NewBuffer([]byte(body)))
 		for k, v := range headers {
 			request.Header.Set(k, *v)
 		}
 		resp, _ := http.DefaultClient.Do(request)
-		respBody := make([]byte, 1024*1024)
+		respBody := make([]byte, 0, 1024*1024)
 		respBody = append(respBody, strconv.Itoa(resp.StatusCode)...)
 		respBody = append(respBody, []byte(`"""split"""`)...)
 		respBodyString, _ := io.ReadAll(resp.Body)

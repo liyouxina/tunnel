@@ -44,8 +44,8 @@ func (tunnel *Tunnel) runTask() {
 		_, _ = conn.Write(taskBody)
 		reader := bufio.NewReader(tunnel.conn)
 		respBody := make([]byte, 1024*1024)
-		_, _ = reader.Read(respBody)
-		respBodyString := string(respBody)
+		n, _ := reader.Read(respBody)
+		respBodyString := string(respBody[:n])
 		res := strings.Split(respBodyString, `"""split"""`)
 		task.resStatus, _ = strconv.Atoi(res[0])
 		if len(res) > 1 {
@@ -88,13 +88,14 @@ func startServer() {
 	server := gin.Default()
 	server.Any("/", func(c *gin.Context) {
 		body := make([]byte, 8096)
-		_, _ = c.Request.Body.Read(body)
+		n, _ := c.Request.Body.Read(body)
+		bodyString := string(body[:n])
 		wg := sync.WaitGroup{}
 		wg.Add(1)
 		task := Task{
 			headers: make(map[string]*string),
 			url:     c.Request.RequestURI,
-			body:    string(body),
+			body:    bodyString,
 			method:  c.Request.Method,
 			wg:      wg,
 		}
@@ -108,6 +109,6 @@ func startServer() {
 
 func main() {
 	taskPool = make(chan *Task)
-	startTunnels()
+	go startTunnels()
 	startServer()
 }
