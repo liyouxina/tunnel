@@ -35,7 +35,7 @@ func (tunnel *Tunnel) runTask() {
 	for {
 		task := <-taskPool
 		conn := tunnel.conn
-		taskBody := make([]byte, 8096)
+		taskBody := make([]byte, 0, 8096)
 		taskBody = append(taskBody, task.headers...)
 		taskBody = append(taskBody, []byte(`"""split"""`)...)
 		taskBody = append(taskBody, task.url...)
