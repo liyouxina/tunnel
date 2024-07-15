@@ -45,7 +45,9 @@ func main() {
 		request, _ := http.NewRequest(method, "http://"+*localServer+url, bytes.NewBuffer([]byte(body)))
 		for _, header := range headers {
 			vs := strings.Split(header, `::::::::::::::::`)
-			request.Header.Set(vs[0], vs[1])
+			if len(vs) == 2 {
+				request.Header.Set(vs[0], vs[1])
+			}
 		}
 		resp, _ := http.DefaultClient.Do(request)
 		respBody := make([]byte, 0, 1024*1024)
