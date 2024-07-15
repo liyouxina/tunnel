@@ -2,11 +2,26 @@ package main
 
 import (
 	"bufio"
-	"fmt"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net"
+	"strconv"
+	"strings"
+	"sync"
 )
+
+type Task struct {
+	headers   map[string]*string
+	url       string
+	body      string
+	method    string
+	wg        sync.WaitGroup
+	resStatus int
+	resBody   string
+}
+
+var taskPool chan *Task
 
 type Tunnel struct {
 	Ip   string
@@ -14,30 +29,31 @@ type Tunnel struct {
 }
 
 func (tunnel *Tunnel) runTask() {
-	reader := bufio.NewReader(tunnel.conn)
 	for {
-		// 读取客户端数据
-		message, err := reader.ReadString('\n')
-		if err != nil {
-			log.Printf("Failed to read from connection: %v", err)
-			return
+		task := <-taskPool
+		conn := tunnel.conn
+		taskBody := make([]byte, 8096)
+		headerBody, _ := json.Marshal(task.headers)
+		taskBody = append(taskBody, headerBody...)
+		taskBody = append(taskBody, []byte(`"""split"""`)...)
+		taskBody = append(taskBody, task.url...)
+		taskBody = append(taskBody, []byte(`"""split"""`)...)
+		taskBody = append(taskBody, task.body...)
+		taskBody = append(taskBody, []byte(`"""split"""`)...)
+		taskBody = append(taskBody, task.method...)
+		_, _ = conn.Write(taskBody)
+		reader := bufio.NewReader(tunnel.conn)
+		respBody := make([]byte, 1024*1024)
+		_, _ = reader.Read(respBody)
+		respBodyString := string(respBody)
+		res := strings.Split(respBodyString, `"""split"""`)
+		task.resStatus, _ = strconv.Atoi(res[0])
+		if len(res) > 1 {
+			task.resBody = res[1]
 		}
-
-		// 输出客户端发送的数据
-		log.Printf("Received from client: %s", message)
-
-		// 向客户端发送响应
-		response := fmt.Sprintf("Echo: %s", message)
-		_, err = tunnel.conn.Write([]byte(response))
-		if err != nil {
-			log.Printf("Failed to write to connection: %v", err)
-			return
-		}
+		task.wg.Done()
 	}
-}
 
-func main() {
-	startTunnels()
 }
 
 func startTunnels() {
@@ -69,5 +85,29 @@ func startTunnels() {
 }
 
 func startServer() {
-	server :=
+	server := gin.Default()
+	server.Any("/", func(c *gin.Context) {
+		body := make([]byte, 8096)
+		_, _ = c.Request.Body.Read(body)
+		wg := sync.WaitGroup{}
+		wg.Add(1)
+		task := Task{
+			headers: make(map[string]*string),
+			url:     c.Request.RequestURI,
+			body:    string(body),
+			method:  c.Request.Method,
+			wg:      wg,
+		}
+		taskPool <- &task
+		wg.Wait()
+		c.Status(task.resStatus)
+		_, _ = c.Writer.Write([]byte(task.resBody))
+	})
+	_ = server.Run("0.0.0.0:8081")
+}
+
+func main() {
+	taskPool = make(chan *Task)
+	startTunnels()
+	startServer()
 }

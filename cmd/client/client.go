@@ -3,103 +3,54 @@ package main
 import (
 	"bytes"
 	"encoding/json"
-	"io/ioutil"
+	"fmt"
+	"io"
 	"log"
+	"net"
 	"net/http"
-	"time"
+	"strconv"
+	"strings"
 )
 
-type Task struct {
-	Method string
-	URL    string
-	Header http.Header
-	Body   []byte
-}
-
-type Result struct {
-	StatusCode int
-	Header     http.Header
-	Body       []byte
-}
+/* TCP 客户端配置 */
 
 func main() {
-	serverURL := "http://<server-ip>:8080"
+	// 1. 拨号方式建立与服务端连接
+	conn, err := net.Dial("tcp", "47.96.73.93:8085")
+	if err != nil {
+		fmt.Println("连接服务端失败,err:", err)
+		return
+	}
+
+	// 注意：关闭连接位置，不能写在连接失败判断上面
+	defer func(conn net.Conn) {
+		err := conn.Close()
+		if err != nil {
+			log.Fatal(err)
+		}
+	}(conn)
 
 	for {
-		task, err := getTask(serverURL + "/task")
-		if err != nil {
-			log.Println("No tasks available, retrying in 5 seconds...")
-			time.Sleep(5 * time.Second)
-			continue
+		requestBody := make([]byte, 1024*8)
+		_, _ = conn.Read(requestBody)
+		requestBodyString := string(requestBody)
+		req := strings.Split(requestBodyString, `"""split"""`)
+		headersString := req[0]
+		headers := make(map[string]*string)
+		_ = json.Unmarshal([]byte(headersString), &headers)
+		url := req[1]
+		body := req[2]
+		method := req[3]
+		request, _ := http.NewRequest(method, "http://localhost:8080/"+url, bytes.NewBuffer([]byte(body)))
+		for k, v := range headers {
+			request.Header.Set(k, *v)
 		}
-
-		result, err := processTask(task)
-		if err != nil {
-			log.Println("Failed to process task:", err)
-			continue
-		}
-
-		err = sendResult(serverURL+"/result", result)
-		if err != nil {
-			log.Println("Failed to send result:", err)
-		}
+		resp, _ := http.DefaultClient.Do(request)
+		respBody := make([]byte, 1024*1024)
+		respBody = append(respBody, strconv.Itoa(resp.StatusCode)...)
+		respBody = append(respBody, []byte(`"""split"""`)...)
+		respBodyString, _ := io.ReadAll(resp.Body)
+		respBody = append(respBody, respBodyString...)
+		_, _ = conn.Write(respBody)
 	}
-}
-
-func getTask(url string) (Task, error) {
-	resp, err := http.Get(url)
-	if err != nil {
-		return Task{}, err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return Task{}, nil
-	}
-
-	var task Task
-	err = json.NewDecoder(resp.Body).Decode(&task)
-	if err != nil {
-		return Task{}, err
-	}
-
-	return task, nil
-}
-
-func processTask(task Task) (Result, error) {
-	req, err := http.NewRequest(task.Method, task.URL, bytes.NewReader(task.Body))
-	if err != nil {
-		return Result{}, err
-	}
-
-	req.Header = task.Header
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return Result{}, err
-	}
-	defer resp.Body.Close()
-
-	body, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return Result{}, err
-	}
-
-	result := Result{
-		StatusCode: resp.StatusCode,
-		Header:     resp.Header,
-		Body:       body,
-	}
-
-	return result, nil
-}
-
-func sendResult(url string, result Result) error {
-	body, err := json.Marshal(result)
-	if err != nil {
-		return err
-	}
-
-	_, err = http.Post(url, "application/json", bytes.NewReader(body))
-	return err
 }
