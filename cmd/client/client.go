@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"log"
@@ -12,11 +13,12 @@ import (
 	"strings"
 )
 
-/* TCP 客户端配置 */
+var server = flag.String("server", "localhost:8080", "a name to say hello to")
+var localServer = flag.String("localServer", "localhost:8080", "a name to say hello to")
 
 func main() {
 	// 1. 拨号方式建立与服务端连接
-	conn, err := net.Dial("tcp", "localhost:8080")
+	conn, err := net.Dial("tcp", *server)
 	if err != nil {
 		fmt.Println("连接服务端失败,err:", err)
 		return
@@ -41,7 +43,7 @@ func main() {
 		url := req[1]
 		body := req[2]
 		method := req[3]
-		request, _ := http.NewRequest(method, "http://localhost:8082/"+url, bytes.NewBuffer([]byte(body)))
+		request, _ := http.NewRequest(method, "http://"+*localServer+url, bytes.NewBuffer([]byte(body)))
 		for k, v := range headers {
 			request.Header.Set(k, *v)
 		}

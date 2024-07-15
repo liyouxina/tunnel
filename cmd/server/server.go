@@ -16,7 +16,7 @@ type Task struct {
 	url       string
 	body      string
 	method    string
-	wg        sync.WaitGroup
+	wg        *sync.WaitGroup
 	resStatus int
 	resBody   string
 }
@@ -86,7 +86,7 @@ func startTunnels() {
 
 func startServer() {
 	server := gin.Default()
-	server.Any("/", func(c *gin.Context) {
+	server.Any("/*path", func(c *gin.Context) {
 		body := make([]byte, 8096)
 		n, _ := c.Request.Body.Read(body)
 		bodyString := string(body[:n])
@@ -97,7 +97,7 @@ func startServer() {
 			url:     c.Request.RequestURI,
 			body:    bodyString,
 			method:  c.Request.Method,
-			wg:      wg,
+			wg:      &wg,
 		}
 		taskPool <- &task
 		wg.Wait()
