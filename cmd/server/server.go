@@ -48,7 +48,11 @@ func (tunnel *Tunnel) runTask() {
 		_, _ = conn.Write(taskBody)
 		reader := bufio.NewReader(tunnel.conn)
 		respBody := make([]byte, 1024*1024)
-		n, _ := reader.Read(respBody)
+		n, err := reader.Read(respBody)
+		if err != nil {
+			// 认为链接关闭
+			log.Println("read error:", err)
+		}
 		respBodyString := string(respBody[:n])
 		res := strings.Split(respBodyString, `"""split"""`)
 		task.resStatus, _ = strconv.Atoi(res[0])
