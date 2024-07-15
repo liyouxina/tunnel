@@ -2,7 +2,6 @@ package main
 
 import (
 	"bufio"
-	"encoding/json"
 	"flag"
 	"github.com/gin-gonic/gin"
 	"log"
@@ -37,8 +36,7 @@ func (tunnel *Tunnel) runTask() {
 		task := <-taskPool
 		conn := tunnel.conn
 		taskBody := make([]byte, 8096)
-		headerBody, _ := json.Marshal(task.headers)
-		taskBody = append(taskBody, headerBody...)
+		taskBody = append(taskBody, task.headers...)
 		taskBody = append(taskBody, []byte(`"""split"""`)...)
 		taskBody = append(taskBody, task.url...)
 		taskBody = append(taskBody, []byte(`"""split"""`)...)
