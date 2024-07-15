@@ -13,8 +13,8 @@ import (
 	"strings"
 )
 
-var server = flag.String("server", "localhost:8080", "a name to say hello to")
-var localServer = flag.String("localServer", "localhost:8080", "a name to say hello to")
+var server = flag.String("server", "localhost:8080", "server")
+var localServer = flag.String("localServer", "localhost:8080", "localServer")
 
 func main() {
 	// 1. 拨号方式建立与服务端连接

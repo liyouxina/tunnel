@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"encoding/json"
+	"flag"
 	"github.com/gin-gonic/gin"
 	"log"
 	"net"
@@ -10,6 +11,9 @@ import (
 	"strings"
 	"sync"
 )
+
+var serverPort = flag.String("port", "8080", "serverPort")
+var tunnelPort = flag.String("port", "8080", "tunnelPort")
 
 type Task struct {
 	headers   map[string]*string
@@ -57,7 +61,7 @@ func (tunnel *Tunnel) runTask() {
 }
 
 func startTunnels() {
-	listener, err := net.Listen("tcp", ":8080")
+	listener, err := net.Listen("tcp", ":"+*tunnelPort)
 	if err != nil {
 		log.Fatalf("Failed to listen on port 8080: %v", err)
 	}
@@ -104,7 +108,7 @@ func startServer() {
 		c.Status(task.resStatus)
 		_, _ = c.Writer.Write([]byte(task.resBody))
 	})
-	_ = server.Run("0.0.0.0:8081")
+	_ = server.Run("0.0.0.0:" + *serverPort)
 }
 
 func main() {
