@@ -43,7 +43,12 @@ func (tunnel *Tunnel) runTask() {
 		taskBody = append(taskBody, task.body...)
 		taskBody = append(taskBody, []byte(`"""split"""`)...)
 		taskBody = append(taskBody, task.method...)
-		_, _ = conn.Write(taskBody)
+		_, err := conn.Write(taskBody)
+		if err != nil {
+			log.Println("write error:", err)
+			taskPool <- task
+			break
+		}
 		reader := bufio.NewReader(tunnel.conn)
 		respBody := make([]byte, 1024*1024)
 		n, err := reader.Read(respBody)
