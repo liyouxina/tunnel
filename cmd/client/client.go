@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"github.com/liyouxina/tunnel/pkg/logger"
+	"github.com/liyouxina/tunnel/pkg/protocal"
 	"io"
 	"net"
 	"net/http"
@@ -53,15 +54,15 @@ func runClient(number int) {
 		n, _ := conn.Read(requestBody)
 		requestBodyString := string(requestBody[:n])
 		log.Infof("req body %s", requestBodyString)
-		reqParams := strings.Split(requestBodyString, `"""split"""`)
+		reqParams := strings.Split(requestBodyString, protocal.PARAM_SPLIT)
 		headersString := reqParams[0]
-		headers := strings.Split(headersString, `;;;;;;;;;;;;;;;;;`)
+		headers := strings.Split(headersString, protocal.HEADER_TAIL)
 		url := reqParams[1]
 		body := reqParams[2]
 		method := reqParams[3]
 		httpRequest, _ := http.NewRequest(method, "http://"+*localServer+url, bytes.NewBuffer([]byte(body)))
 		for _, header := range headers {
-			vs := strings.Split(header, `::::::::::::::::`)
+			vs := strings.Split(header, protocal.HEADER_SPLIT)
 			if len(vs) == 2 {
 				httpRequest.Header.Set(vs[0], vs[1])
 			}
@@ -69,7 +70,7 @@ func runClient(number int) {
 		resp, _ := http.DefaultClient.Do(httpRequest)
 		respBody := make([]byte, 0, 1024*1024)
 		respBody = append(respBody, strconv.Itoa(resp.StatusCode)...)
-		respBody = append(respBody, []byte(`"""split"""`)...)
+		respBody = append(respBody, []byte(protocal.PARAM_SPLIT)...)
 		respBodyString, _ := io.ReadAll(resp.Body)
 		respBody = append(respBody, respBodyString...)
 		log.Infof("resp body %s", respBody)

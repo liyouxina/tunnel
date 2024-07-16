@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"flag"
 	"github.com/gin-gonic/gin"
+	"github.com/liyouxina/tunnel/pkg/protocal"
 	"net"
 	"strconv"
 	"strings"
@@ -33,20 +34,22 @@ type Tunnel struct {
 	Ip     string
 	Number int
 	conn   net.Conn
+	reader *bufio.Reader
 }
 
 func (tunnel *Tunnel) runTask() {
 	for {
 		task := <-taskPool
 		conn := tunnel.conn
-		taskBody := make([]byte, 0, 8096*10)
+		taskBody := make([]byte, 0, 1024*1024)
 		taskBody = append(taskBody, task.headers...)
-		taskBody = append(taskBody, []byte(`"""split"""`)...)
+		taskBody = append(taskBody, []byte(protocal.PARAM_SPLIT)...)
 		taskBody = append(taskBody, task.url...)
-		taskBody = append(taskBody, []byte(`"""split"""`)...)
+		taskBody = append(taskBody, []byte(protocal.PARAM_SPLIT)...)
 		taskBody = append(taskBody, task.body...)
-		taskBody = append(taskBody, []byte(`"""split"""`)...)
+		taskBody = append(taskBody, []byte(protocal.PARAM_SPLIT)...)
 		taskBody = append(taskBody, task.method...)
+		taskBody = append([]byte(strconv.Itoa(len(taskBody))+protocal.PARAM_SPLIT), taskBody...)
 		_, err := conn.Write(taskBody)
 		if err != nil {
 			log.Warnf("write error %v", err)
@@ -56,7 +59,8 @@ func (tunnel *Tunnel) runTask() {
 		}
 		log.Infof("send taskBody %s", string(taskBody))
 		reader := bufio.NewReader(tunnel.conn)
-		respBody := make([]byte, 1024*1024)
+		respBody := make([]byte, 1024, 1024*1024)
+
 		n, err := reader.Read(respBody)
 		if err != nil {
 			log.Warnf("read error %v", err)
@@ -66,7 +70,7 @@ func (tunnel *Tunnel) runTask() {
 		}
 		respBodyString := string(respBody[:n])
 		log.Infof("read taskResp %s", respBodyString)
-		res := strings.Split(respBodyString, `"""split"""`)
+		res := strings.Split(respBodyString, protocal.PARAM_SPLIT)
 		task.resStatus, _ = strconv.Atoi(res[0])
 		if len(res) > 1 {
 			task.resBody = res[1]
@@ -113,7 +117,7 @@ func startServer() {
 		bodyString := string(body[:n])
 		headersString := ""
 		for k, v := range c.Request.Header {
-			headersString = headersString + k + "::::::::::::::::" + v[0] + ";;;;;;;;;;;;;;;;;"
+			headersString = headersString + k + protocal.HEADER_SPLIT + v[0] + protocal.HEADER_TAIL
 		}
 		wg := sync.WaitGroup{}
 		wg.Add(1)
