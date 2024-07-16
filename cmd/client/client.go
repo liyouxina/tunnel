@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"github.com/liyouxina/tunnel/pkg/logger"
 	"io"
-	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -16,6 +16,7 @@ import (
 var server = flag.String("server", "localhost:8080", "server")
 var localServer = flag.String("localServer", "localhost:8080", "localServer")
 var clientCount = flag.Int("clientCount", 100, "clientCount")
+var log = logger.Logger
 
 var wg *sync.WaitGroup
 
@@ -46,30 +47,32 @@ func runClient(number int) {
 			log.Fatal(err)
 		}
 	}(conn)
-	log.Println(`成功启动长连接` + strconv.Itoa(number))
+	log.Infof(`tcp tunnel start ` + strconv.Itoa(number))
 	for {
 		requestBody := make([]byte, 1024*8)
 		n, _ := conn.Read(requestBody)
 		requestBodyString := string(requestBody[:n])
-		req := strings.Split(requestBodyString, `"""split"""`)
-		headersString := req[0]
+		log.Infof("req body %s", requestBodyString)
+		reqParams := strings.Split(requestBodyString, `"""split"""`)
+		headersString := reqParams[0]
 		headers := strings.Split(headersString, `;;;;;;;;;;;;;;;;;`)
-		url := req[1]
-		body := req[2]
-		method := req[3]
-		request, _ := http.NewRequest(method, "http://"+*localServer+url, bytes.NewBuffer([]byte(body)))
+		url := reqParams[1]
+		body := reqParams[2]
+		method := reqParams[3]
+		httpRequest, _ := http.NewRequest(method, "http://"+*localServer+url, bytes.NewBuffer([]byte(body)))
 		for _, header := range headers {
 			vs := strings.Split(header, `::::::::::::::::`)
 			if len(vs) == 2 {
-				request.Header.Set(vs[0], vs[1])
+				httpRequest.Header.Set(vs[0], vs[1])
 			}
 		}
-		resp, _ := http.DefaultClient.Do(request)
+		resp, _ := http.DefaultClient.Do(httpRequest)
 		respBody := make([]byte, 0, 1024*1024)
 		respBody = append(respBody, strconv.Itoa(resp.StatusCode)...)
 		respBody = append(respBody, []byte(`"""split"""`)...)
 		respBodyString, _ := io.ReadAll(resp.Body)
 		respBody = append(respBody, respBodyString...)
+		log.Infof("resp body %s", respBody)
 		_, _ = conn.Write(respBody)
 	}
 }

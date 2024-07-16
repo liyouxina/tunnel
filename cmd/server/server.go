@@ -4,15 +4,18 @@ import (
 	"bufio"
 	"flag"
 	"github.com/gin-gonic/gin"
-	"log"
 	"net"
 	"strconv"
 	"strings"
 	"sync"
+
+	"github.com/liyouxina/tunnel/pkg/logger"
 )
 
 var serverPort = flag.String("serverPort", "8080", "serverPort")
 var tunnelPort = flag.String("tunnelPort", "8080", "tunnelPort")
+
+var log = logger.Logger
 
 type Task struct {
 	headers   string
@@ -24,11 +27,12 @@ type Task struct {
 	resBody   string
 }
 
-var taskPool chan *Task
+var taskPool = make(chan *Task, 100000)
 
 type Tunnel struct {
-	Ip   string
-	conn net.Conn
+	Ip     string
+	Number int
+	conn   net.Conn
 }
 
 func (tunnel *Tunnel) runTask() {
@@ -45,20 +49,23 @@ func (tunnel *Tunnel) runTask() {
 		taskBody = append(taskBody, task.method...)
 		_, err := conn.Write(taskBody)
 		if err != nil {
-			log.Println("write error:", err)
+			log.Warnf("write error %v", err)
+			log.Warnf(`close conn %s %d`, tunnel.conn.RemoteAddr(), tunnel.Number)
 			taskPool <- task
 			break
 		}
+		log.Infof("send taskBody %s", string(taskBody))
 		reader := bufio.NewReader(tunnel.conn)
 		respBody := make([]byte, 1024*1024)
 		n, err := reader.Read(respBody)
 		if err != nil {
-			// 认为链接关闭
-			log.Println("read error:", err)
+			log.Warnf("read error %v", err)
+			log.Warnf(`close conn %s %d`, tunnel.conn.RemoteAddr(), tunnel.Number)
 			taskPool <- task
 			break
 		}
 		respBodyString := string(respBody[:n])
+		log.Infof("read taskResp %s", respBodyString)
 		res := strings.Split(respBodyString, `"""split"""`)
 		task.resStatus, _ = strconv.Atoi(res[0])
 		if len(res) > 1 {
@@ -69,22 +76,23 @@ func (tunnel *Tunnel) runTask() {
 
 }
 
-func startTunnels() {
+func startTunnelServer() {
 	listener, err := net.Listen("tcp", ":"+*tunnelPort)
 	if err != nil {
-		log.Fatalf("Failed to listen on port 8080: %v", err)
+		log.Fatalf("start tunnel server failed %v", err)
+		return
 	}
 	defer func(listener net.Listener) {
 		err := listener.Close()
 		if err != nil {
-			log.Printf("Failed to close listener: %v", err)
+			log.Fatalf("Failed to close listener %v", err)
 		}
 	}(listener)
+	log.Infof("start tunnel server success %v", *tunnelPort)
 	for {
-		// 接受客户端连接
 		conn, err := listener.Accept()
 		if err != nil {
-			log.Printf("Failed to accept connection: %v", err)
+			log.Warnf("Failed to accept tunnel connection %v", err)
 			continue
 		}
 
@@ -125,8 +133,7 @@ func startServer() {
 }
 
 func main() {
-	taskPool = make(chan *Task)
 	flag.Parse()
-	go startTunnels()
+	go startTunnelServer()
 	startServer()
 }
