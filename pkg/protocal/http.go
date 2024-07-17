@@ -19,6 +19,9 @@ func (h HTTPProtocol) Do(task *Task, reader *bufio.Reader, writer *bufio.Writer)
 		return err
 	}
 	log.Infof("reqBody %s", string(reqBody))
+	if err := io.WriteAll(reqBody, writer); err != nil {
+		return err
+	}
 	respBody, err := io.ReadAll(TAIL, reader)
 	if err != nil {
 		return err
