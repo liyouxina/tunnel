@@ -1,13 +1,11 @@
 package main
 
 import (
-	"bufio"
 	"flag"
 	"github.com/gin-gonic/gin"
 	"github.com/liyouxina/tunnel/pkg/protocal"
+	"github.com/liyouxina/tunnel/pkg/tunnel"
 	"net"
-	"strconv"
-	"strings"
 	"sync"
 
 	"github.com/liyouxina/tunnel/pkg/logger"
@@ -17,67 +15,14 @@ var serverPort = flag.String("serverPort", "8080", "serverPort")
 var tunnelPort = flag.String("tunnelPort", "8080", "tunnelPort")
 
 var log = logger.Logger
+var proto protocal.Protocol
+var taskPool = make(chan *protocal.Task, 100000)
 
-type Task struct {
-	headers   string
-	url       string
-	body      string
-	method    string
-	wg        *sync.WaitGroup
-	resStatus int
-	resBody   string
-}
-
-var taskPool = make(chan *Task, 100000)
-
-type Tunnel struct {
-	Ip     string
-	Number int
-	conn   net.Conn
-	reader *bufio.Reader
-}
-
-func (tunnel *Tunnel) runTask() {
-	for {
-		task := <-taskPool
-		conn := tunnel.conn
-		taskBody := make([]byte, 0, 1024*1024)
-		taskBody = append(taskBody, task.headers...)
-		taskBody = append(taskBody, []byte(protocal.PARAM_SPLIT)...)
-		taskBody = append(taskBody, task.url...)
-		taskBody = append(taskBody, []byte(protocal.PARAM_SPLIT)...)
-		taskBody = append(taskBody, task.body...)
-		taskBody = append(taskBody, []byte(protocal.PARAM_SPLIT)...)
-		taskBody = append(taskBody, task.method...)
-		taskBody = append([]byte(strconv.Itoa(len(taskBody))+protocal.PARAM_SPLIT), taskBody...)
-		_, err := conn.Write(taskBody)
-		if err != nil {
-			log.Warnf("write error %v", err)
-			log.Warnf(`close conn %s %d`, tunnel.conn.RemoteAddr(), tunnel.Number)
-			taskPool <- task
-			break
-		}
-		log.Infof("send taskBody %s", string(taskBody))
-		reader := bufio.NewReader(tunnel.conn)
-		respBody := make([]byte, 1024, 1024*1024)
-
-		n, err := reader.Read(respBody)
-		if err != nil {
-			log.Warnf("read error %v", err)
-			log.Warnf(`close conn %s %d`, tunnel.conn.RemoteAddr(), tunnel.Number)
-			taskPool <- task
-			break
-		}
-		respBodyString := string(respBody[:n])
-		log.Infof("read taskResp %s", respBodyString)
-		res := strings.Split(respBodyString, protocal.PARAM_SPLIT)
-		task.resStatus, _ = strconv.Atoi(res[0])
-		if len(res) > 1 {
-			task.resBody = res[1]
-		}
-		task.wg.Done()
-	}
-
+func main() {
+	flag.Parse()
+	proto = protocal.HTTPProtocol{}
+	go startTunnelServer()
+	startServer()
 }
 
 func startTunnelServer() {
@@ -86,12 +31,6 @@ func startTunnelServer() {
 		log.Fatalf("start tunnel server failed %v", err)
 		return
 	}
-	defer func(listener net.Listener) {
-		err := listener.Close()
-		if err != nil {
-			log.Fatalf("Failed to close listener %v", err)
-		}
-	}(listener)
 	log.Infof("start tunnel server success %v", *tunnelPort)
 	for {
 		conn, err := listener.Accept()
@@ -99,13 +38,8 @@ func startTunnelServer() {
 			log.Warnf("Failed to accept tunnel connection %v", err)
 			continue
 		}
-
-		tunnel := &Tunnel{
-			conn: conn,
-			Ip:   conn.RemoteAddr().String(),
-		}
-
-		go tunnel.runTask()
+		tunnel.NewTunnel(conn, proto).Run(taskPool)
+		log.Infof("get tunnel %s", conn.RemoteAddr())
 	}
 }
 
@@ -121,23 +55,17 @@ func startServer() {
 		}
 		wg := sync.WaitGroup{}
 		wg.Add(1)
-		task := Task{
-			headers: headersString,
-			url:     c.Request.RequestURI,
-			body:    bodyString,
-			method:  c.Request.Method,
-			wg:      &wg,
+		task := protocal.Task{
+			Headers: headersString,
+			Url:     c.Request.RequestURI,
+			Body:    bodyString,
+			Method:  c.Request.Method,
+			Wg:      &wg,
 		}
 		taskPool <- &task
 		wg.Wait()
-		c.Status(task.resStatus)
-		_, _ = c.Writer.Write([]byte(task.resBody))
+		c.Status(task.ResStatus)
+		_, _ = c.Writer.Write([]byte(task.ResBody))
 	})
 	_ = server.Run("0.0.0.0:" + *serverPort)
-}
-
-func main() {
-	flag.Parse()
-	go startTunnelServer()
-	startServer()
 }
