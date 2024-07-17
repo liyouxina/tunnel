@@ -61,6 +61,7 @@ func (tunnelAgent *TunnelAgent) Run() {
 			respBody = append(respBody, []byte(protocal.PARAM_SPLIT)...)
 			respBodyString, _ := io.ReadAll(httpResp.Body)
 			respBody = append(respBody, respBodyString...)
+			respBody = append(respBody, []byte(protocal.TAIL)...)
 			log.Infof("respBody %s", respBody)
 			if err = tcpIO.WriteAll(respBody, tunnelAgent.writer); err != nil {
 				log.Error("write respBody fail", err)
