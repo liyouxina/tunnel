@@ -15,6 +15,7 @@ func WriteAll(body []byte, writer *bufio.Writer) error {
 		}
 		writeIndex = n
 	}
+	_ = writer.Flush()
 	return nil
 }
 
