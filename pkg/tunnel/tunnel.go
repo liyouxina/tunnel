@@ -31,7 +31,7 @@ func (tunnel *Tunnel) Run(taskPool chan *protocal.Task) {
 			task := <-taskPool
 			err := tunnel.proto.Do(task, tunnel.reader, tunnel.writer)
 			if err != nil {
-				log.Error("do error, kill this tunnel", err)
+				log.Error("do error, kill this tunnel ", err)
 				_ = tunnel.conn.Close()
 				taskPool <- task
 				break

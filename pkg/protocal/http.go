@@ -2,8 +2,10 @@ package protocal
 
 import (
 	"bufio"
-	"github.com/liyouxina/tunnel/pkg/io"
+	"errors"
+	tcpIO "github.com/liyouxina/tunnel/pkg/io"
 	"github.com/liyouxina/tunnel/pkg/logger"
+	"io"
 	"strconv"
 	"strings"
 )
@@ -15,16 +17,19 @@ type HTTPProtocol struct {
 
 func (h HTTPProtocol) Do(task *Task, reader *bufio.Reader, writer *bufio.Writer) error {
 	reqBody := task.genReqBody()
-	if err := io.WriteAll(reqBody, writer); err != nil {
+	if err := tcpIO.WriteAll(reqBody, writer); err != nil {
 		return err
 	}
 	log.Infof("reqBody %s", string(reqBody))
-	if err := io.WriteAll(reqBody, writer); err != nil {
+	if err := tcpIO.WriteAll(reqBody, writer); err != nil {
 		return err
 	}
-	respBody, err := io.ReadAll(TAIL, reader)
-	if err != nil {
+	respBody, err := tcpIO.ReadAll(TAIL, reader)
+	if err != nil && err != io.EOF {
 		return err
+	}
+	if respBody == nil {
+		return errors.New("respBody is nil")
 	}
 	res := strings.Split(*respBody, PARAM_SPLIT)
 	task.ResStatus, _ = strconv.Atoi(res[0])
