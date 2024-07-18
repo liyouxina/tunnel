@@ -42,7 +42,7 @@ func (tunnelAgent *TunnelAgent) Run() {
 				break
 			}
 			if reqBody == nil || *reqBody == "" {
-				log.Error("read reqBody nil or empty", err)
+				log.Error("read reqBody nil or empty")
 				_ = tunnelAgent.conn.Close()
 				tunnelAgent.wg.Done()
 				break

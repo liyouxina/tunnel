@@ -32,11 +32,10 @@ func ReadAll(tail string, reader *bufio.Reader) (*string, error) {
 			return nil, err
 		}
 		readIndex += n
-		respBodyString := string(respBody[:readIndex])
+		respBodyString = string(respBody[:readIndex])
 		log.Infof("read respBodyString: %s", respBodyString)
 		tailIndex := strings.Index(respBodyString, tail)
 		if tailIndex > 0 {
-			respBodyString = respBodyString[:tailIndex]
 			// 粘包处理 单tunnel串行处理请求，不会有粘包问题
 			break
 		}
