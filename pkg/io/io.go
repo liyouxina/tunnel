@@ -2,11 +2,8 @@ package io
 
 import (
 	"bufio"
-	"github.com/liyouxina/tunnel/pkg/logger"
 	"strings"
 )
-
-var log = logger.Logger
 
 func WriteAll(body []byte, writer *bufio.Writer) error {
 	writeIndex := 0
@@ -33,7 +30,6 @@ func ReadAll(tail string, reader *bufio.Reader) (*string, error) {
 		}
 		readIndex += n
 		respBodyString = string(respBody[:readIndex])
-		log.Infof("read respBodyString: %s", respBodyString)
 		tailIndex := strings.Index(respBodyString, tail)
 		if tailIndex > 0 {
 			respBodyString = respBodyString[:tailIndex]
