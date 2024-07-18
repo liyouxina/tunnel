@@ -17,9 +17,6 @@ type HTTPProtocol struct {
 
 func (h HTTPProtocol) Do(task *Task, reader *bufio.Reader, writer *bufio.Writer) error {
 	reqBody := task.genReqBody()
-	if err := tcpIO.WriteAll(reqBody, writer); err != nil {
-		return err
-	}
 	log.Infof("reqBody %s", string(reqBody))
 	if err := tcpIO.WriteAll(reqBody, writer); err != nil {
 		return err
@@ -28,9 +25,10 @@ func (h HTTPProtocol) Do(task *Task, reader *bufio.Reader, writer *bufio.Writer)
 	if err != nil && err != io.EOF {
 		return err
 	}
-	if respBody == nil {
+	if respBody == nil || *respBody == "" {
 		return errors.New("respBody is nil")
 	}
+	log.Infof("respBody %s", string(reqBody))
 	res := strings.Split(*respBody, PARAM_SPLIT)
 	task.ResStatus, _ = strconv.Atoi(res[0])
 	if len(res) > 1 {

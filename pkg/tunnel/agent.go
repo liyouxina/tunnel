@@ -41,8 +41,11 @@ func (tunnelAgent *TunnelAgent) Run() {
 				tunnelAgent.wg.Done()
 				break
 			}
-			if reqBody == nil {
-
+			if reqBody == nil || *reqBody == "" {
+				log.Error("read reqBody nil or empty", err)
+				_ = tunnelAgent.conn.Close()
+				tunnelAgent.wg.Done()
+				break
 			}
 			log.Infof("reqBody %s", *reqBody)
 			reqParams := strings.Split(*reqBody, protocal.PARAM_SPLIT)
