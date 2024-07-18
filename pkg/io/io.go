@@ -16,7 +16,7 @@ func WriteAll(body []byte, writer *bufio.Writer) error {
 		if err != nil {
 			return err
 		}
-		writeIndex = n
+		writeIndex += n
 	}
 	_ = writer.Flush()
 	return nil
@@ -24,7 +24,7 @@ func WriteAll(body []byte, writer *bufio.Writer) error {
 
 func ReadAll(tail string, reader *bufio.Reader) (*string, error) {
 	var respBodyString string
-	respBody := make([]byte, 0, 1024*1024)
+	respBody := make([]byte, 1024*1024)
 	readIndex := 0
 	for {
 		n, err := reader.Read(respBody[readIndex:])
