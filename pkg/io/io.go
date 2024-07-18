@@ -24,7 +24,7 @@ func ReadAll(tail string, reader *bufio.Reader) (*string, error) {
 	respBody := make([]byte, 0, 1024*1024)
 	readIndex := 0
 	for {
-		n, err := reader.Read(respBody)
+		n, err := reader.Read(respBody[readIndex:])
 		if err != nil {
 			return nil, err
 		}
