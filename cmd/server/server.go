@@ -15,32 +15,36 @@ var serverPort = flag.String("serverPort", "8080", "serverPort")
 var tunnelPort = flag.String("tunnelPort", "8080", "tunnelPort")
 
 var log = logger.Logger
-var proto protocal.Protocol
+var proto = protocal.HTTPProtocol{}
 var taskPool = make(chan *protocal.Task, 100000)
 
-func main() {
+func init() {
 	flag.Parse()
-	proto = protocal.HTTPProtocol{}
-	go startTunnelServer()
+}
+
+func main() {
+	startTunnelServer()
 	startServer()
 }
 
 func startTunnelServer() {
-	listener, err := net.Listen("tcp", ":"+*tunnelPort)
-	if err != nil {
-		log.Fatalf("start tunnel server failed %v", err)
-		return
-	}
-	log.Infof("start tunnel server success %v", *tunnelPort)
-	for {
-		conn, err := listener.Accept()
+	go func() {
+		listener, err := net.Listen("tcp", ":"+*tunnelPort)
 		if err != nil {
-			log.Warnf("Failed to accept tunnel connection %v", err)
-			continue
+			log.Fatalf("start tunnel server failed %v", err)
+			return
 		}
-		tunnel.NewTunnel(conn, proto).Run(taskPool)
-		log.Infof("get tunnel %s", conn.RemoteAddr())
-	}
+		log.Infof("start tunnel server success %v", *tunnelPort)
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				log.Warnf("Failed to accept tunnel connection %v", err)
+				continue
+			}
+			tunnel.NewTunnel(conn, proto).Run(taskPool)
+			log.Infof("get tunnel %s", conn.RemoteAddr())
+		}
+	}()
 }
 
 func startServer() {
