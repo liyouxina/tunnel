@@ -11,8 +11,8 @@ import (
 	"github.com/liyouxina/tunnel/pkg/logger"
 )
 
-var serverPort = flag.String("serverPort", "8080", "serverPort")
-var tunnelPort = flag.String("tunnelPort", "8080", "tunnelPort")
+var serverPort = flag.String("serverPort", "8090", "serverPort")
+var tunnelPort = flag.String("tunnelPort", "8091", "tunnelPort")
 
 var log = logger.Logger
 var proto = protocal.HTTPProtocol{}
@@ -24,7 +24,7 @@ func init() {
 
 func main() {
 	startTunnelServer()
-	startServer()
+	startHTTPServer()
 }
 
 func startTunnelServer() {
@@ -47,7 +47,7 @@ func startTunnelServer() {
 	}()
 }
 
-func startServer() {
+func startHTTPServer() {
 	server := gin.Default()
 	server.Any("/*path", func(c *gin.Context) {
 		body := make([]byte, 8096)
