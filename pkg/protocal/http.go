@@ -28,7 +28,7 @@ func (h HTTPProtocol) Do(task *Task, reader *bufio.Reader, writer *bufio.Writer)
 	if respBody == nil || *respBody == "" {
 		return errors.New("respBody is nil")
 	}
-	log.Infof("respBody %s", string(reqBody))
+	log.Infof("respBody %s", respBody)
 	res := strings.Split(*respBody, PARAM_SPLIT)
 	task.ResStatus, _ = strconv.Atoi(res[0])
 	if len(res) > 1 {
