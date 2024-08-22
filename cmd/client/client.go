@@ -2,33 +2,22 @@ package main
 
 import (
 	"flag"
+	"github.com/liyouxina/tunnel/pkg/agent"
 	"github.com/liyouxina/tunnel/pkg/logger"
-	"github.com/liyouxina/tunnel/pkg/tunnel"
-	"net"
-	"strconv"
-	"sync"
 )
 
-var server = flag.String("server", "localhost:8080", "server")
-var localServer = flag.String("localServer", "localhost:8080", "localServer")
-var clientCount = flag.Int("clientCount", 100, "clientCount")
+var tunnelServer = flag.String("tunnelServer", "localhost:8091", "tunnelServer")
+var targetServer = flag.String("targetServer", "localhost:8080", "targetServer")
+var maxAgentCnt = flag.Int("maxAgentCnt", 100, "maxAgentCnt")
+
 var log = logger.Logger
 
-var wg *sync.WaitGroup
+func init() {
+	flag.Parse()
+}
 
 func main() {
-	flag.Parse()
-	wg = &sync.WaitGroup{}
-	for number := 0; number < *clientCount; number++ {
-		wg.Add(1)
-		conn, err := net.Dial("tcp", *server)
-		if err != nil {
-			log.Errorf("连接服务端失败 %s", err)
-			wg.Done()
-		}
-		tunnelAgent := tunnel.NewTunnelAgent(conn, *localServer, wg)
-		tunnelAgent.Run()
-		log.Infof(`tcp tunnel start ` + strconv.Itoa(number))
-	}
-	wg.Wait()
+	agent.StartAgents(*tunnelServer, *targetServer, *maxAgentCnt)
+	log.Infof("启动成功")
+	select {}
 }
