@@ -20,7 +20,7 @@ func NewTunnel(conn net.Conn, proto protocal.Protocol) *Tunnel {
 	return &Tunnel{
 		conn:   conn,
 		proto:  proto,
-		reader: bufio.NewReader(conn),
+		reader: bufio.NewReaderSize(conn, 1024*1024*10),
 		writer: bufio.NewWriter(conn),
 	}
 }
