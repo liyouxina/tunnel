@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"go.uber.org/zap"
-	"io"
 	"net"
+	"sync"
 	"time"
 
 	"github.com/liyouxina/tunnel/pkg/logger"
@@ -78,6 +78,8 @@ func tunnel() {
 
 }
 
+var lock sync.Mutex
+
 func server() {
 	var err error
 	listener, err := net.Listen("tcp", ":"+*serverPort)
@@ -93,7 +95,8 @@ func server() {
 				log.Error("Failed to accept server connection", zap.Error(err))
 				continue
 			}
-
+			log.Info("get serverConn from client", zap.String("client", serverConn.RemoteAddr().String()))
+			lock.Lock()
 			go func() {
 				for {
 					buffer := make([]byte, 1024)
@@ -106,13 +109,14 @@ func server() {
 					log.Info("serverConn read success", zap.String("client", string(buffer[:n])))
 					if err != nil {
 						log.Error("Failed to read serverConn", zap.Error(err))
-						if err != io.EOF {
-							err = serverConn.Close()
-							if err != nil {
-								log.Error("Failed to close server connection", zap.Error(err))
-							}
-							break
+						err = serverConn.Close()
+						lock.Unlock()
+						if err != nil {
+							log.Error("Failed to close server connection", zap.Error(err))
+						} else {
+							log.Info("close server connection success")
 						}
+						break
 					}
 					for tunnelConn == nil {
 						log.Info("waiting for tunnelConn")

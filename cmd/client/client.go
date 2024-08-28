@@ -82,11 +82,10 @@ func server() {
 			n, err := targetConn.Read(buffer)
 			log.Info("targetConn read success", zap.String("content", string(buffer[:n])))
 			if err != nil {
-				log.Error("Failed to read tunnelConn", zap.Error(err))
-				if err != io.EOF {
-					_ = targetConn.Close()
-					targetConn = nil
-				}
+				log.Error("Failed to read targetConn", zap.Error(err))
+				_ = targetConn.Close()
+				targetConn = nil
+				continue
 			}
 			for tunnelConn == nil {
 				log.Info("wait for tunnelConn")
